@@ -1,0 +1,75 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Resources": {
+        "CarSalesTopic": {
+            "Type": "AWS::SNS::Topic"
+        },
+        "ERPSubscription": {
+            "Type": "AWS::SNS::Subscription",
+            "Properties": {
+                "TopicArn": {
+                    "Ref": "CarSalesTopic"
+                },
+                "Endpoint": {
+                    "Fn::GetAtt": ["ERPIntegrationQueue", "Arn"]
+                },
+                "Protocol": "sqs",
+                "RawMessageDelivery": "true"
+            }
+        },
+        "CRMSubscription": {
+            "Type": "AWS::SNS::Subscription",
+            "Properties": {
+                "TopicArn": {
+                    "Ref": "CarSalesTopic"
+                },
+                "Endpoint": {
+                    "Fn::GetAtt": ["CRMIntegrationQueue", "Arn"]
+                },
+                "Protocol": "sqs",
+                "RawMessageDelivery": "true",
+                "FilterPolicy": {
+                    "buyer-class": [
+                        "vip"
+                    ]
+                }
+            }
+        },
+        "SCMSubscription": {
+            "Type": "AWS::SNS::Subscription",
+            "Properties": {
+                "TopicArn": {
+                    "Ref": "CarSalesTopic"
+                },
+                "Endpoint": {
+                    "Ref": "myHttpEndpoint"
+                },
+                "Protocol": "https",
+                "DeliveryPolicy": {
+                    "healthyRetryPolicy": {
+                        "numRetries": 20,
+                        "minDelayTarget": 10,
+                        "maxDelayTarget": 30,
+                        "numMinDelayRetries": 3,
+                        "numMaxDelayRetries": 17,
+                        "numNoDelayRetries": 0,
+                        "backoffFunction": "exponential"
+                    }
+                }
+            }
+        },
+        "ERPIntegrationQueue": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {}
+        },
+        "CRMIntegrationQueue": {
+            "Type": "AWS::SQS::Queue",
+            "Properties": {}
+        }
+    },
+    "Parameters": {
+        "myHttpEndpoint": {
+            "Type": "String"
+        }
+    }
+}
