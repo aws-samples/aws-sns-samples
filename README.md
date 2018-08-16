@@ -7,7 +7,7 @@ Currently, the following AWS CloudFormation templates are hosted in this reposit
 | Code                                          | Tutorial/Blog                                             |
 |-----------------------------------------------|-----------------------------------------------------------|
 | [SNS-VPCE-Tutorial-CloudFormation.template](https://github.com/aws-samples/aws-sns-samples/blob/master/templates/SNS-VPCE-Tutorial-CloudFormation.template) | [Publishing Amazon SNS Messages Privately from Amazon VPC](https://aws.amazon.com/getting-started/projects/publish-sns-message-privately-vpc-ec2-cloudformation-lambda/) |
-| [SNS-Subscription-Attributes-Tutorial-CloudFormation.template](https://github.com/aws-samples/aws-sns-samples/blob/master/templates/SNS-Subscription-Attributes-Tutorial-CloudFormation.template)  | Managing Amazon SNS Subscription Attributes with AWS CloudFormation |
+| [SNS-Subscription-Attributes-Tutorial-CloudFormation.template](https://github.com/aws-samples/aws-sns-samples/blob/master/templates/SNS-Subscription-Attributes-Tutorial-CloudFormation.template)  | [Managing Amazon SNS Subscription Attributes with AWS CloudFormation](https://aws.amazon.com/blogs/compute/managing-amazon-sns-subscription-attributes-with-aws-cloudformation/) |
 
 ## License Summary
 
