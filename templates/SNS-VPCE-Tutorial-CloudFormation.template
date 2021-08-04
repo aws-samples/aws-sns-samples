@@ -96,7 +96,7 @@ Resources:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupName: Tutorial Security Group
-      GroupDescription: Security group for SNS VPC endpoing tutorial
+      GroupDescription: Security group for SNS VPC endpoint tutorial
       VpcId: !Ref VPC
       SecurityGroupIngress:
         - IpProtocol: '-1'
