@@ -1,0 +1,156 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  FirehoseRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - firehose.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: s3access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - s3:AbortMultipartUpload
+                  - s3:GetBucketLocation
+                  - s3:GetObject
+                  - s3:ListBucket
+                  - s3:ListBucketMultipartUploads
+                  - s3:PutObject
+                Resource: 
+                  - !Join
+                    - ''
+                    - - 'arn:'
+                      - !Ref AWS::Partition
+                      - ':s3:::'
+                      - !Ref AuditS3Bucket
+                  - !Join
+                    - ''
+                    - - 'arn:'
+                      - !Ref AWS::Partition
+                      - ':s3:::'
+                      - !Ref AuditS3Bucket
+                      - '/*'
+
+  AuditCWLLogs:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: '/aws/vendedlogs/clinicaudit'
+      
+  AuditS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties: {}
+    
+  AuditFirehose:
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      S3DestinationConfiguration: 
+        BucketARN: !GetAtt AuditS3Bucket.Arn
+        RoleARN: !GetAtt FirehoseRole.Arn
+        BufferingHints:
+          IntervalInSeconds: 60
+
+  ClinicSNSTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+      - !Ref ClinicSNSTopic
+      PolicyDocument:
+        Statement:
+        - Action: 'sns:Publish'
+          Sid : 'publish-permission'
+          Effect: Allow
+          Resource: !Ref ClinicSNSTopic
+          Principal:
+            AWS: 
+              - !Ref AWS::AccountId
+        - Action: 'sns:Subscribe'
+          Sid: 'subscriber-permission-billing'
+          Effect: Allow
+          Resource: !Ref ClinicSNSTopic
+          Principal:
+            AWS: 
+              - !ImportValue "BillingRoleExportDataProtectionDemo"
+        - Action: 'sns:Subscribe'
+          Sid: 'subscriber-permission-schedule'
+          Effect: Allow
+          Resource: !Ref ClinicSNSTopic
+          Principal:
+            AWS: 
+              - !ImportValue "SchedulingRoleExportDataProtectionDemo"
+            
+  ClinicSNSTopic:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      TopicName: SampleClinic
+      DataProtectionPolicy:
+        Name: data-protection-example-policy
+        Description: Policy Description
+        Version: 2021-06-01
+        Statement:
+          - Sid: audit
+            DataDirection: Inbound
+            Principal:
+             - '*'
+            DataIdentifier:
+              - 'arn:aws:dataprotection::aws:data-identifier/Address'
+              - 'arn:aws:dataprotection::aws:data-identifier/AwsSecretKey'
+              - 'arn:aws:dataprotection::aws:data-identifier/DriversLicense-US'
+              - 'arn:aws:dataprotection::aws:data-identifier/EmailAddress'
+              - 'arn:aws:dataprotection::aws:data-identifier/IpAddress'
+              - 'arn:aws:dataprotection::aws:data-identifier/NationalDrugCode-US'
+              - 'arn:aws:dataprotection::aws:data-identifier/PassportNumber-US'
+              - 'arn:aws:dataprotection::aws:data-identifier/Ssn-US'
+            Operation:
+              Audit:
+                SampleRate: 99
+                FindingsDestination:
+                  CloudWatchLogs:
+                    LogGroup: !Ref AuditCWLLogs
+                  Firehose:
+                    DeliveryStream: !Ref AuditFirehose
+                NoFindingsDestination:
+                  S3:
+                    Bucket: !Ref AuditS3Bucket
+          - Sid: deny-inbound
+            DataDirection: Inbound
+            Principal:
+              - '*'
+            DataIdentifier:
+              - 'arn:aws:dataprotection::aws:data-identifier/PassportNumber-US'
+              - 'arn:aws:dataprotection::aws:data-identifier/Ssn-US'
+            Operation:
+              Deny: {}
+          - Sid: deny-outbound-billing
+            DataDirection: Outbound
+            Principal:
+              - !ImportValue "BillingRoleExportDataProtectionDemo"
+            DataIdentifier:
+              - 'arn:aws:dataprotection::aws:data-identifier/NationalDrugCode-US'
+            Operation:
+              Deny: {}
+          - Sid: deny-outbound-scheduling
+            DataDirection: Outbound
+            Principal:
+              - !ImportValue "SchedulingRoleExportDataProtectionDemo"
+            DataIdentifier:
+              - 'arn:aws:dataprotection::aws:data-identifier/Address'
+              - 'arn:aws:dataprotection::aws:data-identifier/CreditCardNumber'
+            Operation:
+              Deny: {}
+
+
+Outputs:
+  MedicalTopicOutput:
+    Description: 'Arn of the medical clinic topic'
+    Value: !Ref ClinicSNSTopic
+    Export:
+      Name: "ClinicDemoProtectionArn"

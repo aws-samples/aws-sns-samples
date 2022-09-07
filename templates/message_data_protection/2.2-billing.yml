@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+  BillingQueue:
+    Type: AWS::SQS::Queue
+    Properties: 
+      VisibilityTimeout: 120
+
+  BillingLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: python3.9
+      Timeout: 60
+      Handler: index.handler
+      InlineCode: |-
+          import json
+
+          def handler(event, context):
+            message = json.loads(event['Records'][0]['body'])   
+            print("{} received from queue {}".format(message['Message'], event['Records'][0]['eventSourceARN']))
+      Events:
+        SQS:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt BillingQueue.Arn
+
+  BillingSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !ImportValue 'ClinicDemoProtectionArn'
+      Endpoint: !GetAtt BillingQueue.Arn
+      Protocol: sqs

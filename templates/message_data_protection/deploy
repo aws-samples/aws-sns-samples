@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+PROG=$(basename $0)
+USAGE="usage: $PROG prefix"
+if [[ $# -lt 1 ]]; then
+  echo "$USAGE"; exit 1
+fi
+prefix=$1
+
+BILLING_ROLE_OUTPUT_KEY='BillingRoleExport'
+SCHEDULING_ROLE_OUTPUT_KEY='SchedulingRoleExport'
+
+prerequisites_stack="$prefix-prereqs"
+sam deploy --resolve-s3 --stack-name $prerequisites_stack --capabilities CAPABILITY_IAM --template 0-prereqs.yml
+
+billing_role=$(aws cloudformation describe-stacks --stack-name $prerequisites_stack --output text --query "Stacks[].Outputs[?OutputKey==\`$BILLING_ROLE_OUTPUT_KEY\`].OutputValue")
+scheduling_role=$(aws cloudformation describe-stacks --stack-name $prerequisites_stack --output text --query "Stacks[].Outputs[?OutputKey==\`$SCHEDULING_ROLE_OUTPUT_KEY\`].OutputValue")
+
+topic_stack="$prefix-topicowner"
+sam deploy --resolve-s3 --stack-name $topic_stack --capabilities CAPABILITY_IAM --template 1-topicowner.yml
+
+scheduling_stack="$prefix-scheduling"
+sam deploy --resolve-s3 --stack-name $scheduling_stack --capabilities CAPABILITY_IAM --template 2.1-scheduling.yml --role-arn $scheduling_role
+
+billing_stack="$prefix-billing"
+sam deploy --resolve-s3 --stack-name $billing_stack --capabilities CAPABILITY_IAM --template 2.2-billing.yml --role-arn $billing_role
