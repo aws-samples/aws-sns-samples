@@ -10,7 +10,17 @@ With message data protection, you can scan messages in real-time for PII/PHI and
 
 ## Installation
 
-There are two ways to setup this example. One option is to directly run the script `deploy` with a prefix. Other option is to make the deployments manually by following the steps below:
+There are two ways to setup this example. One option is to directly run the `deploy` script, which automatically executes the four SAM templates in scope. Another option is to execute each SAM template individually.
+
+### Option 1 - Aggregate script
+
+Run the following command on your terminal. 
+
+```shell
+./deploy MyDataProtectionDemo
+```
+
+### Option 2 - Individual templates
 
 1. First, run the Pre-requisites stack that will create two IAM roles that will be used in subsequent steps:
 ```shell
