@@ -7,6 +7,32 @@ Resources:
     Properties: 
       VisibilityTimeout: 120
 
+  SchedulingQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref SchedulingQueue
+      PolicyDocument:
+        Id: AllowIncomingAccess
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !Ref AWS::AccountId
+            Action:
+              - sqs:ReceiveMessage
+            Resource:
+              - !GetAtt SchedulingQueue.Arn
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !GetAtt SchedulingQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !ImportValue 'ClinicDemoProtectionArn'
+
   SchedulingLambdaFunction:
     Type: AWS::Serverless::Function
     Properties:

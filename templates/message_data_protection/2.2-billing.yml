@@ -7,6 +7,32 @@ Resources:
     Properties: 
       VisibilityTimeout: 120
 
+  BillingQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref BillingQueue
+      PolicyDocument:
+        Id: AllowIncomingAccess
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                - !Ref AWS::AccountId
+            Action:
+              - sqs:ReceiveMessage
+            Resource:
+             - !GetAtt BillingQueue.Arn
+          - Effect: Allow
+            Principal: '*'
+            Action:
+              - sqs:SendMessage
+            Resource:
+              - !GetAtt BillingQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !ImportValue 'ClinicDemoProtectionArn'
+
   BillingLambdaFunction:
     Type: AWS::Serverless::Function
     Properties:
