@@ -33,7 +33,7 @@ This step should output the names of two IAM roles under the name `BillingRoleEx
 sam deploy --resolve-s3 --stack-name clinic-topic --capabilities CAPABILITY_IAM --template 1-topicowner.yml
 ```
 
-3. Gather the names of the two IAM roles
+3. Gather the names of the two IAM roles as we will use these to setup the subscriber stacks below
 ```shell
 BILLING_ROLE_OUTPUT_KEY='BillingRoleExport'
 SCHEDULING_ROLE_OUTPUT_KEY='SchedulingRoleExport'
@@ -42,12 +42,12 @@ billing_role=$(aws cloudformation describe-stacks --stack-name clinic-prerequisi
 scheduling_role=$(aws cloudformation describe-stacks --stack-name clinic-prerequisites --output text --query "Stacks[].Outputs[?OutputKey==\`$SCHEDULING_ROLE_OUTPUT_KEY\`].OutputValue")
 ```
 
-4. Create the subscriber stack for Scheduling
+4. Create the subscriber stack for Scheduling. Note that we make this deployment using the IAM role that we created for the scheduling system
 ```shell
 sam deploy --resolve-s3 --stack-name clinic-scheduling --capabilities CAPABILITY_IAM --template 2.1-scheduling.yml --role-arn $scheduling_role
 ```
 
-5. Create the subscriber stack for Billing
+5. Create the subscriber stack for Billing. Note that we make this deployment using the IAM role that we created for the billing system
 ```shell
 sam deploy --resolve-s3 --stack-name clinic-billing --capabilities CAPABILITY_IAM --template 2.2-billing.yml --role-arn $billing_role
 ```
