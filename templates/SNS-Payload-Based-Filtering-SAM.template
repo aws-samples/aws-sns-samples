@@ -1,0 +1,93 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  SAM Template for insurance-events-sam-app
+
+Resources:
+
+  # SNS topic policy that grants the S3 service principal access to publish messages to the SNS topic
+  InsuranceEventsTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref InsuranceEventsTopic
+      PolicyDocument:
+        Id: TopicPolicy
+        Version: "2012-10-17"
+        Statement:
+          - Sid: Allow-S3-Publish
+            Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action:
+             - sns:Publish
+            Resource: "*"
+
+  InsuranceEventsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: insurance-events-topic
+
+  AutoInsuranceEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: auto-insurance-events-queue
+
+  HomeInsuranceEventsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: home-insurance-events-queue
+
+  AutoInsuranceEventsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: sqs
+      Endpoint: !GetAtt AutoInsuranceEventsQueue.Arn
+      TopicArn: !Ref InsuranceEventsTopic
+      FilterPolicyScope: MessageBody
+      FilterPolicy:
+        '{"Records":{"s3":{"object":{"key":[{"prefix":"auto-"}]}},"eventName":[{"prefix":"ObjectCreated:"}]}}'
+
+  HomeInsuranceEventsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Protocol: sqs
+      Endpoint: !GetAtt HomeInsuranceEventsQueue.Arn
+      TopicArn: !Ref InsuranceEventsTopic
+      FilterPolicyScope: MessageBody
+      FilterPolicy:
+        '{"Records":{"s3":{"object":{"key":[{"prefix":"home-"}]}},"eventName":[{"prefix":"ObjectCreated:"}]}}'
+
+  InsuranceEventsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    DependsOn: InsuranceEventsTopicPolicy
+    Properties:
+      NotificationConfiguration:
+        TopicConfigurations:
+          - Topic: !Ref InsuranceEventsTopic
+            Event: 's3:ObjectCreated:*'
+
+  InsuranceEventsQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref AutoInsuranceEventsQueue
+        - !Ref HomeInsuranceEventsQueue
+      PolicyDocument:
+        Statement:
+          - Sid: Allow-SNS-SendMessage
+            Effect: Allow
+            Principal:
+              Service : "sns.amazonaws.com"
+            Action:
+              - SQS:SendMessage
+            Resource: "*"
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Ref InsuranceEventsTopic
+
+Outputs:
+  InsuranceEventsBucketName:
+    Description: The name of the S3 bucket to which insurance documents are uploaded, and from which events are triggered
+    Value: !Ref InsuranceEventsBucket
