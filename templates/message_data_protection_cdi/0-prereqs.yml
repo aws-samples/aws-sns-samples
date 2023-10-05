@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  CFServiceRolePolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      Description: Policy for test roles
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: 
+              - cloudformation:CreateChangeSet
+              - cloudformation:CreateStack
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - sns:Subscribe
+              - sns:Unsubscribe
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - iam:AttachRolePolicy
+              - iam:CreateRole
+              - iam:DeleteRole
+              - iam:DetachRolePolicy
+              - iam:GetRole
+              - iam:PassRole
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - lambda:CreateEventSourceMapping
+              - lambda:CreateFunction
+              - lambda:DeleteEventSourceMapping
+              - lambda:DeleteFunction
+              - lambda:GetEventSourceMapping
+              - lambda:GetFunction
+              - lambda:TagResource
+              - lambda:AddPermission
+              - lambda:UpdateFunctionCode
+              - lambda:ListTags
+            Resource: '*'
+                
+  PaymentApplicationRole:
+    Type: 'AWS::IAM::Role'
+    Properties: 
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - cloudformation.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Ref CFServiceRolePolicy
+
+  ReportingApplicationRole:
+    Type: 'AWS::IAM::Role'
+    Properties: 
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - cloudformation.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - !Ref CFServiceRolePolicy     
+
+Outputs:
+  PaymentRoleExport:
+    Description: 'Use this payment role for subscriptions to topic'
+    Value: !GetAtt PaymentApplicationRole.Arn
+    Export:
+      Name: 'PaymentRoleExportDataProtectionDemo'
+      
+  ReportingRoleExport:
+    Description: 'Use this reporting role for subscriptions to topic'
+    Value: !GetAtt ReportingApplicationRole.Arn
+    Export:
+      Name: 'ReportingRoleExportDataProtectionDemo'

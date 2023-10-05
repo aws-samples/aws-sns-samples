@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: 2010-09-09
+Resources:
+  ApprovalTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+      - !Ref ApprovalSNSTopicArn
+      PolicyDocument:
+        Statement:
+        - Action: 'sns:Publish'
+          Sid : 'publish-permission'
+          Effect: Allow
+          Resource: !Ref ApprovalSNSTopicArn
+          Principal:
+            AWS: 
+              - !Ref AWS::AccountId
+        - Action: 'sns:Subscribe'
+          Sid: 'subscriber-permission-payment'
+          Effect: Allow
+          Resource: !Ref ApprovalSNSTopicArn
+          Principal:
+            AWS: 
+              - !ImportValue 'PaymentRoleExportDataProtectionDemo'
+        - Action: 'sns:Subscribe'
+          Sid: 'subscriber-permission-reporting'
+          Effect: Allow
+          Resource: !Ref ApprovalSNSTopicArn
+          Principal:
+            AWS: 
+              - !ImportValue 'ReportingRoleExportDataProtectionDemo'
+            
+  ApprovalSNSTopicArn:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      TopicName: 'ApprovalTopic'
+      DataProtectionPolicy:
+        Name: '__example_data_protection_policy'
+        Description: 'This policy protects sensitive data in expense reports'
+        Version: 2021-06-01
+        Configuration:
+          CustomDataIdentifier:
+            - Name: 'MyCompanyEmployeeId'
+              Regex: 'EID-\d{9}-US'
+        Statement:
+          - Sid: 'deidentify-outbound'
+            DataDirection: Outbound
+            Principal:
+              - !ImportValue 'ReportingRoleExportDataProtectionDemo'
+            DataIdentifier:
+              - 'MyCompanyEmployeeId'
+              - 'arn:aws:dataprotection::aws:data-identifier/CreditCardNumber'
+            Operation:
+              Deidentify: 
+                MaskConfig: 
+                  MaskWithCharacter: '#'
+
+Outputs:
+  ApprovalTopicOutput:
+    Description: 'Arn of the approval topic'
+    Value: !Ref ApprovalSNSTopicArn
+    Export:
+      Name: 'ApprovalSNSTopicArn'

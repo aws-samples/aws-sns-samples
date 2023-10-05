@@ -1,0 +1,32 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+  PaymentLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: python3.9
+      Timeout: 60
+      Handler: index.handler
+      InlineCode: |-
+          import json
+
+          def handler(event, context):
+            message = event['Records'][0]['Sns']['Message']
+            suscrptionArn = event['Records'][0]['EventSubscriptionArn']
+            print("Message delivered to SNS subscription {}".format(suscrptionArn))
+            print(message.replace('\n', ' ').replace('\r', ''))
+
+  PaymentLambdaFunctionInvokePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName: !Ref PaymentLambdaFunction
+      Principal: sns.amazonaws.com  
+
+  PaymentSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      TopicArn: !ImportValue 'ApprovalSNSTopicArn'
+      Endpoint: !GetAtt PaymentLambdaFunction.Arn
+      Protocol: lambda
